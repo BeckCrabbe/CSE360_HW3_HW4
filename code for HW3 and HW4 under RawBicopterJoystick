@@ -1,0 +1,95 @@
+#from comm.Serial import SerialController, DataType_Int, DataType_Float
+from comm.Serial import SerialController, DataType_Int, DataType_Float
+from joystick.JoystickManager import JoystickManager
+import time
+
+##### Insert your robot's MAC ADDRESS here ####
+## (you can get it by running your arduino and looking at the serial monitor for your flying drone) ##
+ROBOT_MAC = "48:27:E2:E6:E6:50" # "DC:54:75:D7:B3:E8" 48:27:E2:E6:E6:50
+### Insert your SERIAL PORT here ###
+## may look like "COM5" in windows or "/dev/tty.usbmodem14301" in mac  #
+## look in arduino for the port that your specific transeiver ics connected to  ##
+## Note: make sure that your serial monitor is OFF in arduino or else you will get "access is denied" error. ##
+PORT = "COM4"
+
+
+# For debug purposes
+PRINT_JOYSTICK = False
+
+
+BaseStationAddress = "" # you do not need this, just make sure your DroneMacAddress is not your base station mac address
+
+def leftservo(joystick_input):
+    servo_position = 90 + (45*joystick_input) 
+    return servo_position
+
+def rightservo(joystick_input):
+    servo_position = 90 - (45*joystick_input) 
+    return servo_position
+#def leftturn(joystick_input):
+ #   servo_position = 30 - (90*joystick_input) 
+    #return servo_position
+if __name__ == "__main__":
+    # Communication
+    serial = SerialController(PORT, timeout=.1)  # 5-second timeout
+    serial.manage_peer("A", ROBOT_MAC)
+    serial.send_preference(ROBOT_MAC, DataType_Float, "kpz", .6)
+    serial.send_preference(ROBOT_MAC, DataType_Float, "kdz", .8)
+    serial.send_control_params(ROBOT_MAC, (0,0,90,90, 0, 0, 0, 0, 0, 0, 0, 1, 0)) #refresh parameters
+    time.sleep(.2)
+
+    # Joystick
+    joystick = JoystickManager()
+
+    try:
+        while True:
+            left_vert = 0
+            left_horz = 0
+            right_vert = 0
+            right_horz = 0
+            left_trigger = 0
+            right_trigger = 0
+            axis = [left_vert, left_horz, left_trigger,right_vert, right_horz, right_trigger]
+            # Button inputs: [A, B, X, Y]
+            axis, buttons = joystick.getJoystickInputs()
+            #print(axis)
+
+            if PRINT_JOYSTICK:
+                print(" ".join(["{:.1f}".format(num) for num in axis]), buttons)
+
+            #### CONTROL INPUTS to the robot here #########
+            thrust = axis[0] * -1 # [-0 0 1 -1 -0 0 -1 [0,0,0,0]]
+            thrust2 = axis[2] *-1
+            thrust3 = axis[5] * -1
+           # print(axis)
+            # [1 0 -1 -0 0 -1 [0,0,0,0]] when left_vert goes down
+            # [-1 0 -0 0 -1 [0,0,0,0]] when left_vert goes up
+
+            #  # Adjust as needed for servo sensitivity
+            # servo_diff = axis[1] * 45.0
+
+             # Move servos in the same direction based on right vertical joystick
+            #servo_movement = axis[3] * 50.0  # Adjust as needed for servo sensitivity -0, 0 1, -0 0 -1 [0,0,0,0] #right_vertical
+            # axis [ 0 1 2 3 4 5 ] - left vert, left hor, left... right vert, right hot ... ... 
+            # Adjust motor and servo values based on joystick inputs
+            m2 = thrust2  #left motor
+            m1 = thrust3 # right motor
+
+            s2 = leftservo(axis[3])
+            s1 = rightservo(axis[3])
+            led = axis[0]
+
+
+    
+
+                        ############# End CONTROL INPUTS ###############
+
+            # Send through serial port
+            serial.send_control_params(ROBOT_MAC, (m1, m2, s1, s2, led, 0, 0, 0, 0, 0, 0, 0, 0))
+            time.sleep(.03)
+            
+    except KeyboardInterrupt:
+        print("Stopping!")
+    # Send zero input
+    serial.send_control_params(ROBOT_MAC, (0, 0, 90, 90, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+    serial.close()
