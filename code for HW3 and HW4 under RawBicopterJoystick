@@ -72,8 +72,8 @@ if __name__ == "__main__":
             #servo_movement = axis[3] * 50.0  # Adjust as needed for servo sensitivity -0, 0 1, -0 0 -1 [0,0,0,0] #right_vertical
             # axis [ 0 1 2 3 4 5 ] - left vert, left hor, left... right vert, right hot ... ... 
             # Adjust motor and servo values based on joystick inputs
-            m2 = thrust2  #left motor
-            m1 = thrust3 # right motor
+            m2 = thrust  #left motor
+            m1 = thrust # right motor
 
             s2 = leftservo(axis[3])
             s1 = rightservo(axis[3])
